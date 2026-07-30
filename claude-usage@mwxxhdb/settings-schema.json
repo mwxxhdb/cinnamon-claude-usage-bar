@@ -1,0 +1,43 @@
+{
+    "refresh-minutes": {
+        "type": "spinbutton",
+        "default": 5,
+        "min": 1,
+        "max": 180,
+        "step": 1,
+        "units": "minutes",
+        "description": "Refresh interval"
+    },
+    "command": {
+        "type": "entry",
+        "default": "claude -p /usage",
+        "description": "Command used to read the usage"
+    },
+    "bar-width": {
+        "type": "spinbutton",
+        "default": 140,
+        "min": 60,
+        "max": 400,
+        "step": 10,
+        "units": "px",
+        "description": "Bar width"
+    },
+    "workdays-per-week": {
+        "type": "spinbutton",
+        "default": 5,
+        "min": 1,
+        "max": 7,
+        "step": 1,
+        "units": "days",
+        "description": "Workdays per week (the weekly time marker walks the whole bar in this many days)"
+    },
+    "danger-threshold": {
+        "type": "spinbutton",
+        "default": 10,
+        "min": 1,
+        "max": 50,
+        "step": 1,
+        "units": "points",
+        "description": "How many points ahead of the time marker turns the bar red (any amount ahead turns it orange)"
+    }
+}

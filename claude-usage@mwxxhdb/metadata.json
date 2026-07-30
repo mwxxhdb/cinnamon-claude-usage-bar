@@ -1,0 +1,8 @@
+{
+    "uuid": "claude-usage@mwxxhdb",
+    "name": "Claude Usage Bar",
+    "description": "Show Claude Code 5-hour session and weekly usage as two progress bars, with a time marker",
+    "version": "1.0.0",
+    "author": "mwxxhdb",
+    "max-instances": 1
+}
