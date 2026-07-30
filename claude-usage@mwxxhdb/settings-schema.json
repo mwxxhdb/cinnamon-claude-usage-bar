@@ -22,15 +22,6 @@
         "units": "px",
         "description": "Bar width"
     },
-    "workdays-per-week": {
-        "type": "spinbutton",
-        "default": 5,
-        "min": 1,
-        "max": 7,
-        "step": 1,
-        "units": "days",
-        "description": "Workdays per week (the weekly time marker walks the whole bar in this many days)"
-    },
     "danger-threshold": {
         "type": "spinbutton",
         "default": 10,
@@ -39,5 +30,55 @@
         "step": 1,
         "units": "points",
         "description": "How many points ahead of the time marker turns the bar red (any amount ahead turns it orange)"
+    },
+    "schedule-header": {
+        "type": "header",
+        "description": "Work hours (the weekly time marker only moves while you are at work)"
+    },
+    "work-week-start": {
+        "type": "combobox",
+        "default": 1,
+        "description": "First day of the work week",
+        "options": {
+            "Monday": 1,
+            "Tuesday": 2,
+            "Wednesday": 3,
+            "Thursday": 4,
+            "Friday": 5,
+            "Saturday": 6,
+            "Sunday": 0
+        }
+    },
+    "work-week-end": {
+        "type": "combobox",
+        "default": 5,
+        "description": "Last day of the work week",
+        "options": {
+            "Monday": 1,
+            "Tuesday": 2,
+            "Wednesday": 3,
+            "Thursday": 4,
+            "Friday": 5,
+            "Saturday": 6,
+            "Sunday": 0
+        }
+    },
+    "work-day-start": {
+        "type": "timechooser",
+        "default": {
+            "h": 9,
+            "m": 0,
+            "s": 0
+        },
+        "description": "Work day starts at"
+    },
+    "work-day-end": {
+        "type": "timechooser",
+        "default": {
+            "h": 18,
+            "m": 0,
+            "s": 0
+        },
+        "description": "Work day ends at (an earlier time than the start means a shift crossing midnight)"
     }
 }

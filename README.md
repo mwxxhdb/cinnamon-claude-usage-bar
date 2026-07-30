@@ -62,19 +62,22 @@ Then add it from the panel's Applets dialog as above. If the applet does not sho
 
 Right click the applet → **Configure**:
 
-![The applet settings dialog](docs/images/settings.png)
-
 | Setting | Default | Description |
 |---|---|---|
 | Refresh interval | 5 minutes | How often `claude -p /usage` runs |
 | Command used to read the usage | `claude -p /usage` | Change it if `claude` is not on your `PATH` (use an absolute path) |
 | Bar width | 140 px | Width of the applet in the panel |
-| Workdays per week | 5 days | The weekly time marker walks the whole bar in this many days (see below) |
 | Danger threshold | 10 points | How far ahead of the marker the usage must be before the bar turns from orange to red |
+| First / last day of the work week | Monday / Friday | Which days count as work days (see below) |
+| Work day starts / ends at | 09:00 / 18:00 | Your work hours on those days |
 
-### Workdays per week
+### Work hours
 
-The weekly quota always resets after 7 days, but if you only work 5 days a week a marker that moves evenly over 7 days makes it look like you are always ahead of schedule. This setting splits the window into N slices of 24 hours: the marker reaches the end of the bar N×24 hours after the window started, and stays there for the rest of the week (your weekend). Default is 5.
+The weekly quota always resets after 7 days, but you do not work all 168 of them. If the marker moved evenly over the whole week it would look like you are always ahead of schedule, and every Monday morning it would look like you are far behind.
+
+So the weekly marker is paced by **work hours instead of wall-clock time**: it shows how much of the window's work time is already gone. With the defaults (Monday–Friday, 09:00–18:00) a 7-day window holds 45 work hours, and the marker sits at 20% once the first work day is over. Outside your work hours the marker stands still, so the comparison with the usage stays honest whenever you look at the panel.
+
+The work week may wrap over Sunday (e.g. Sunday → Thursday), and an end time earlier than the start time means a shift crossing midnight (e.g. 22:00 → 06:00). If both times are equal there are no work hours at all, and the marker falls back to moving evenly over the 7 days.
 
 ## Usage
 

@@ -6,8 +6,9 @@
  *   bottom — current week (all models) usage
  *
  * A vertical marker on each bar shows where "now" sits inside the
- * 5-hour / 7-day window. If usage is slightly ahead of the marker the
- * bar turns orange; far ahead it turns red.
+ * window: real time for the 5-hour session, work hours for the week.
+ * If usage is slightly ahead of the marker the bar turns orange;
+ * far ahead it turns red.
  *
  * Data comes from parsing the output of `claude -p /usage`.
  */
@@ -51,7 +52,10 @@ class ClaudeUsageApplet extends Applet.Applet {
         this.settings.bind('command', 'command', () => {});
         this.settings.bind('bar-width', 'barWidth', () => this._applyWidth());
         this.settings.bind('danger-threshold', 'dangerThreshold', () => this._area.queue_repaint());
-        this.settings.bind('workdays-per-week', 'workdaysPerWeek', () => this._area.queue_repaint());
+        this.settings.bind('work-week-start', 'workWeekStart', () => this._area.queue_repaint());
+        this.settings.bind('work-week-end', 'workWeekEnd', () => this._area.queue_repaint());
+        this.settings.bind('work-day-start', 'workDayStart', () => this._area.queue_repaint());
+        this.settings.bind('work-day-end', 'workDayEnd', () => this._area.queue_repaint());
 
         this._area = new St.DrawingArea();
         this._applyWidth();
@@ -194,17 +198,82 @@ class ClaudeUsageApplet extends Applet.Applet {
     }
 
     /**
-     * Position of "now" inside the window. The window always spans
-     * periodMs (ending at resetAt), but the marker walks it in
-     * effectiveMs — for the weekly bar effectiveMs is workdays × 24h,
-     * so the marker reaches the end after the workdays are spent and
-     * stays there through the rest of the week.
+     * Position of "now" inside a window that ends at resetAt and spans
+     * periodMs. Plain wall-clock pacing, used for the 5-hour session bar.
      */
-    _timeFraction(data, periodMs, effectiveMs) {
+    _timeFraction(data, periodMs) {
         if (!data || !data.resetAt) return null;
         const start = data.resetAt.getTime() - periodMs;
-        const frac = (Date.now() - start) / effectiveMs;
-        return Math.min(1, Math.max(0, frac));
+        return this._clamp01((Date.now() - start) / periodMs);
+    }
+
+    /**
+     * Position of "now" inside the weekly window, measured in work hours
+     * instead of wall-clock time: how much of the window's work time is
+     * already gone. The marker stands still outside work hours, so it
+     * stays comparable to the usage no matter when you look at it.
+     */
+    _weekTimeFraction(data) {
+        if (!data || !data.resetAt) return null;
+        const end = data.resetAt.getTime();
+        const start = end - WEEK_MS;
+        const total = this._workMsBetween(start, end);
+        // no work hours configured (start == end) — fall back to wall-clock
+        if (total <= 0) return this._clamp01((Date.now() - start) / WEEK_MS);
+        const done = this._workMsBetween(start, Math.min(Date.now(), end));
+        return this._clamp01(done / total);
+    }
+
+    /** Work time (ms) inside [fromMs, toMs), following the configured schedule. */
+    _workMsBetween(fromMs, toMs) {
+        if (toMs <= fromMs) return 0;
+
+        const startMin = this._timeToMinutes(this.workDayStart, 9 * 60);
+        let lengthMin = this._timeToMinutes(this.workDayEnd, 18 * 60) - startMin;
+        if (lengthMin < 0) lengthMin += 24 * 60;  // shift crossing midnight
+        if (lengthMin === 0) return 0;            // same start and end: no work hours
+
+        // start a day early, so a shift begun the day before is counted too
+        const first = new Date(fromMs);
+        let day = new Date(first.getFullYear(), first.getMonth(), first.getDate() - 1);
+
+        let sum = 0;
+        for (let i = 0; i < 16 && day.getTime() <= toMs; i++) {
+            if (this._isWorkDay(day.getDay())) {
+                // build the shift per day (not by adding 24h) so DST shifts are kept
+                const shiftStart = day.getTime() + startMin * 60000;
+                const shiftEnd = shiftStart + lengthMin * 60000;
+                sum += Math.max(0, Math.min(shiftEnd, toMs) - Math.max(shiftStart, fromMs));
+            }
+            day = new Date(day.getFullYear(), day.getMonth(), day.getDate() + 1);
+        }
+        return sum;
+    }
+
+    /** dow: 0 = Sunday … 6 = Saturday. The work week may wrap over Sunday. */
+    _isWorkDay(dow) {
+        const from = this._dayIndex(this.workWeekStart, 1);
+        const to = this._dayIndex(this.workWeekEnd, 5);
+        if (from <= to) return dow >= from && dow <= to;
+        return dow >= from || dow <= to;
+    }
+
+    _dayIndex(value, fallback) {
+        const n = parseInt(value, 10);
+        return (isNaN(n) || n < 0 || n > 6) ? fallback : n;
+    }
+
+    /** The timechooser setting is a { h, m, s } object. */
+    _timeToMinutes(value, fallback) {
+        if (!value || typeof value !== 'object') return fallback;
+        const h = parseInt(value.h, 10);
+        const m = parseInt(value.m, 10);
+        if (isNaN(h) || isNaN(m)) return fallback;
+        return h * 60 + m;
+    }
+
+    _clamp01(v) {
+        return Math.min(1, Math.max(0, v));
     }
 
     _onRepaint(area) {
@@ -214,14 +283,15 @@ class ClaudeUsageApplet extends Applet.Applet {
         const gap = 3;
         const barH = Math.max(3, (h - padY * 2 - gap) / 2);
 
-        const workdays = Math.min(7, Math.max(1, this.workdaysPerWeek || 5));
-        this._drawBar(cr, 0, padY, w, barH, this._session, SESSION_MS, SESSION_MS);
-        this._drawBar(cr, 0, padY + barH + gap, w, barH, this._week, WEEK_MS, WEEK_MS * workdays / 7);
+        this._drawBar(cr, 0, padY, w, barH, this._session,
+            this._timeFraction(this._session, SESSION_MS));
+        this._drawBar(cr, 0, padY + barH + gap, w, barH, this._week,
+            this._weekTimeFraction(this._week));
 
         cr.$dispose();
     }
 
-    _drawBar(cr, x, y, w, h, data, periodMs, effectiveMs) {
+    _drawBar(cr, x, y, w, h, data, timeFrac) {
         const r = Math.min(3, h / 2);
         const track = (this._error && !data) ? COLOR_TRACK_ERROR : COLOR_TRACK;
         cr.setSourceRGBA(track[0], track[1], track[2], track[3]);
@@ -230,8 +300,7 @@ class ClaudeUsageApplet extends Applet.Applet {
 
         if (!data) return;
 
-        const frac = Math.min(1, Math.max(0, data.pct / 100));
-        const timeFrac = this._timeFraction(data, periodMs, effectiveMs);
+        const frac = this._clamp01(data.pct / 100);
 
         let color = COLOR_OK;
         if (timeFrac !== null) {
