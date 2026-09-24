@@ -45,7 +45,7 @@ fi
 if ! /bin/bash -lc 'command -v claude >/dev/null 2>&1'; then
     echo "Warning: the 'claude' command was not found in a login shell." >&2
     echo "         Install Claude Code first, or set the full path to 'claude' in the" >&2
-    echo "         applet settings (for example: /home/$USER/.local/bin/claude -p /usage)." >&2
+    echo "         applet settings (for example: /home/$USER/.local/bin/claude -p /usage --no-session-persistence)." >&2
 fi
 
 if [ ! -f "$SRC/metadata.json" ]; then

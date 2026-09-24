@@ -15,18 +15,18 @@ Each bar has a white vertical marker showing where "now" sits inside the 5-hour 
 - **Orange** — usage is slightly ahead of the marker, you may run out before the reset
 - **Red** — usage is far ahead of the marker (more than 10 points by default, configurable), you will probably run out early
 
-The data comes from running `claude -p /usage` on a timer and parsing its output.
+The data comes from running `claude -p /usage --no-session-persistence` on a timer and parsing its output.
 
 ## Requirements
 
 - Linux Mint with the **Cinnamon** desktop (tested on Mint 22.1 / Cinnamon 6.4)
-- [Claude Code](https://claude.com/claude-code) installed and logged in, so that `claude -p /usage` prints your usage
+- [Claude Code](https://claude.com/claude-code) installed and logged in, so that `claude -p /usage --no-session-persistence` prints your usage
 - `git` (only to clone this repository)
 
 Check that the data source works before installing:
 
 ```bash
-claude -p /usage
+claude -p /usage --no-session-persistence
 ```
 
 The output should contain lines like `Current session: 12% used` and `Current week (all models): 30% used`.
@@ -64,8 +64,8 @@ Right click the applet → **Configure**:
 
 | Setting | Default | Description |
 |---|---|---|
-| Refresh interval | 5 minutes | How often `claude -p /usage` runs |
-| Command used to read the usage | `claude -p /usage` | Change it if `claude` is not on your `PATH` (use an absolute path) |
+| Refresh interval | 5 minutes | How often `claude -p /usage --no-session-persistence` runs |
+| Command used to read the usage | `claude -p /usage --no-session-persistence` | Change it if `claude` is not on your `PATH` (use an absolute path) |
 | Bar width | 140 px | Width of the applet in the panel |
 | Danger threshold | 10 points | How far ahead of the marker the usage must be before the bar turns from orange to red |
 | First / last day of the work week | Monday / Friday | Which days count as work days (see below) |
@@ -79,6 +79,8 @@ So the weekly marker is paced by **work hours instead of wall-clock time**: it s
 
 The work week may wrap over Sunday (e.g. Sunday → Thursday), and an end time earlier than the start time means a shift crossing midnight (e.g. 22:00 → 06:00). If both times are equal there are no work hours at all, and the marker falls back to moving evenly over the 7 days.
 
+The 5-hour session marker follows the same rule. If a session runs past the end of your work day (e.g. 14:49 → 19:49 with work ending at 18:00), the marker is paced to 18:00 and reaches 100% when you leave. A session with no work time in it at all (e.g. on a weekend) falls back to real time.
+
 ## Usage
 
 - **Hover** — tooltip with the details (percentages, reset times, last update time)
@@ -88,7 +90,7 @@ The work week may wrap over Sunday (e.g. Sunday → Thursday), and an end time e
 ## Notes and troubleshooting
 
 - Reset times are parsed in your local timezone (the timezone name in the `/usage` output is ignored).
-- Every refresh really runs `claude -p /usage`, so do not set the refresh interval too low.
+- Every refresh really runs `claude -p /usage --no-session-persistence`, so do not set the refresh interval too low.
 - The command runs in a **bash login shell** (`/bin/bash -lc`), so `PATH` additions from `~/.profile` or `~/.bashrc` are picked up. If the bars stay empty and the tooltip shows an error, run the same command in a terminal, or put the absolute path to `claude` in the settings.
 - Applet load errors show up in the system log:
 

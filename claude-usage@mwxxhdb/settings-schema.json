@@ -10,7 +10,7 @@
     },
     "command": {
         "type": "entry",
-        "default": "claude -p /usage",
+        "default": "claude -p /usage --no-session-persistence",
         "description": "Command used to read the usage"
     },
     "bar-width": {
@@ -33,7 +33,7 @@
     },
     "schedule-header": {
         "type": "header",
-        "description": "Work hours (the weekly time marker only moves while you are at work)"
+        "description": "Work hours (the time markers only move while you are at work)"
     },
     "work-week-start": {
         "type": "combobox",

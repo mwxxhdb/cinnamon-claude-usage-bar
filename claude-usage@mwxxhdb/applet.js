@@ -6,11 +6,11 @@
  *   bottom — current week (all models) usage
  *
  * A vertical marker on each bar shows where "now" sits inside the
- * window: real time for the 5-hour session, work hours for the week.
+ * window, measured in work hours (wall-clock when the window holds none).
  * If usage is slightly ahead of the marker the bar turns orange;
  * far ahead it turns red.
  *
- * Data comes from parsing the output of `claude -p /usage`.
+ * Data comes from parsing the output of `claude -p /usage --no-session-persistence`.
  */
 
 const Applet = imports.ui.applet;
@@ -105,7 +105,7 @@ class ClaudeUsageApplet extends Applet.Applet {
             // bash login shell so PATH additions (~/.local/bin etc.) are picked up;
             // /bin/sh (dash) chokes on bash-only syntax in ~/.profile
             const proc = Gio.Subprocess.new(
-                ['/bin/bash', '-lc', this.command || 'claude -p /usage'],
+                ['/bin/bash', '-lc', this.command || 'claude -p /usage --no-session-persistence'],
                 Gio.SubprocessFlags.STDOUT_PIPE | Gio.SubprocessFlags.STDERR_PIPE
             );
             proc.communicate_utf8_async(null, null, (p, res) => {
@@ -199,27 +199,19 @@ class ClaudeUsageApplet extends Applet.Applet {
 
     /**
      * Position of "now" inside a window that ends at resetAt and spans
-     * periodMs. Plain wall-clock pacing, used for the 5-hour session bar.
+     * periodMs, measured in work hours instead of wall-clock time: how
+     * much of the window's work time is already gone. The marker stands
+     * still outside work hours, so it stays comparable to the usage no
+     * matter when you look at it. A 5-hour session that runs past the
+     * end of the work day is paced to the end of the work day.
      */
     _timeFraction(data, periodMs) {
         if (!data || !data.resetAt) return null;
-        const start = data.resetAt.getTime() - periodMs;
-        return this._clamp01((Date.now() - start) / periodMs);
-    }
-
-    /**
-     * Position of "now" inside the weekly window, measured in work hours
-     * instead of wall-clock time: how much of the window's work time is
-     * already gone. The marker stands still outside work hours, so it
-     * stays comparable to the usage no matter when you look at it.
-     */
-    _weekTimeFraction(data) {
-        if (!data || !data.resetAt) return null;
         const end = data.resetAt.getTime();
-        const start = end - WEEK_MS;
+        const start = end - periodMs;
         const total = this._workMsBetween(start, end);
-        // no work hours configured (start == end) — fall back to wall-clock
-        if (total <= 0) return this._clamp01((Date.now() - start) / WEEK_MS);
+        // no work time inside the window — fall back to wall-clock
+        if (total <= 0) return this._clamp01((Date.now() - start) / periodMs);
         const done = this._workMsBetween(start, Math.min(Date.now(), end));
         return this._clamp01(done / total);
     }
@@ -286,7 +278,7 @@ class ClaudeUsageApplet extends Applet.Applet {
         this._drawBar(cr, 0, padY, w, barH, this._session,
             this._timeFraction(this._session, SESSION_MS));
         this._drawBar(cr, 0, padY + barH + gap, w, barH, this._week,
-            this._weekTimeFraction(this._week));
+            this._timeFraction(this._week, WEEK_MS));
 
         cr.$dispose();
     }

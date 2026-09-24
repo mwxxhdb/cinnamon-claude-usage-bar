@@ -15,18 +15,18 @@
 - **橙色** — 用量略微超前于标记，可能在重置前用完
 - **红色** — 用量远超标记（默认超过 10 个百分点，可配置），大概率会提前用完
 
-数据来自定时运行 `claude -p /usage` 并解析其输出。
+数据来自定时运行 `claude -p /usage --no-session-persistence` 并解析其输出。
 
 ## 环境要求
 
 - 使用 **Cinnamon** 桌面的 Linux Mint（在 Mint 22.1 / Cinnamon 6.4 上测试通过）
-- 已安装并登录 [Claude Code](https://claude.com/claude-code)，使 `claude -p /usage` 能正常输出用量
+- 已安装并登录 [Claude Code](https://claude.com/claude-code)，使 `claude -p /usage --no-session-persistence` 能正常输出用量
 - `git`（仅用于克隆本仓库）
 
 安装前先确认数据源可用：
 
 ```bash
-claude -p /usage
+claude -p /usage --no-session-persistence
 ```
 
 输出中应当包含类似 `Current session: 12% used` 和 `Current week (all models): 30% used` 的行。
@@ -64,8 +64,8 @@ cp -r 'claude-usage@mwxxhdb' ~/.local/share/cinnamon/applets/
 
 | 设置项 | 默认值 | 说明 |
 |---|---|---|
-| Refresh interval | 5 分钟 | 每隔多久运行一次 `claude -p /usage` |
-| Command used to read the usage | `claude -p /usage` | 如果 `claude` 不在 `PATH` 中，改这里（用绝对路径） |
+| Refresh interval | 5 分钟 | 每隔多久运行一次 `claude -p /usage --no-session-persistence` |
+| Command used to read the usage | `claude -p /usage --no-session-persistence` | 如果 `claude` 不在 `PATH` 中，改这里（用绝对路径） |
 | Bar width | 140 像素 | 小程序在面板中的宽度 |
 | Danger threshold | 10 个点 | 用量超前标记多少个百分点后，进度条由橙色变为红色 |
 | First / last day of the work week | 周一 / 周五 | 哪几天算工作日（见下文） |
@@ -79,6 +79,8 @@ cp -r 'claude-usage@mwxxhdb' ~/.local/share/cinnamon/applets/
 
 工作周可以跨过周日（例如周日 → 周四），下班时间早于上班时间表示跨午夜的班次（例如 22:00 → 06:00）。如果两个时间相同，则视为没有工时，标记退回到在 7 天里匀速移动。
 
+5 小时会话进度条的标记也遵循同样的规则。如果会话窗口超出了下班时间（例如 14:49 → 19:49，而 18:00 下班），标记按 18:00 计算，下班时正好走到 100%。如果窗口内完全没有工时（例如周末），则退回到按真实时间推进。
+
 ## 使用
 
 - **悬停** — 显示详情提示（百分比、重置时间、上次更新时间）
@@ -88,7 +90,7 @@ cp -r 'claude-usage@mwxxhdb' ~/.local/share/cinnamon/applets/
 ## 说明与故障排查
 
 - 重置时间按本机所在时区解析（`/usage` 输出中的时区名称会被忽略）。
-- 每次刷新都会真实执行一次 `claude -p /usage`，所以刷新间隔不要设得太短。
+- 每次刷新都会真实执行一次 `claude -p /usage --no-session-persistence`，所以刷新间隔不要设得太短。
 - 命令运行在 **bash 登录 shell**（`/bin/bash -lc`）中，因此 `~/.profile` 或 `~/.bashrc` 里对 `PATH` 的追加会生效。如果进度条一直是空的、提示里显示错误，先在终端里跑同样的命令，或者在设置里填 `claude` 的绝对路径。
 - 小程序的加载错误会记录在系统日志中：
 
